@@ -6,15 +6,20 @@ services:
       - 5432:5432
     env_file:
       - ./envs/orders.env
+    volumes:
+      - orders_db_data:/var/lib/postgresql/data
 
-  orders-api:
+  orders_api:
     build:
       context: ./orders-service
       dockerfile: Dockerfile
-    container_name: orders-api
+    container_name: orders_api
     ports:
       - 8081:8080
     env_file:
       - ./envs/orders.env
     depends_on:
       - orders_db
+
+volumes:
+  orders_db_data: {}
