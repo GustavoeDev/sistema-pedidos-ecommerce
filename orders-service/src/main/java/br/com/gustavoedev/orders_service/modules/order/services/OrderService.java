@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,10 +20,10 @@ public class OrderService {
     private OrderRepository orderRepository;
 
     @Transactional
-    public OrderEntity execute(OrderCreateDTO orderCreateDTO) {
+    public OrderEntity execute(OrderCreateDTO orderCreateDTO, String clientId) {
 
         OrderEntity order = new OrderEntity();
-        order.setClientId(orderCreateDTO.getClientId());
+        order.setClientId(UUID.fromString(clientId));
         order.setStatus("PROCESSING");
 
         List<OrderItemEntity> items = orderCreateDTO.getItems().stream().map(itemDTO -> {
