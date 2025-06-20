@@ -15,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 public class OrderCreateDTO {
 
-    @NotEmpty
+    @NotEmpty(message = "A lista de itens do pedido não pode estar vazia.")
     private List<OrderItemDTO> items = new ArrayList<>();
 
 }
