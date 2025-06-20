@@ -1,4 +1,41 @@
 services:
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.5
+    container_name: keycloak
+    command:
+      - start-dev
+    env_file:
+      - ./envs/keycloak.env
+    ports:
+      - "8080:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "timeout 10s bash -c ':> /dev/tcp/localhost/8080' || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    ports:
+      - "9000:9000"
+    restart: on-failure
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      ordersapi:
+        condition: service_started
+    networks:
+      - app-network
+
   orders_db:
     container_name: orders_db
     image: postgres
@@ -8,18 +45,32 @@ services:
       - ./envs/orders.env
     volumes:
       - orders_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  orders_api:
+  ordersapi:
     build:
       context: ./orders-service
       dockerfile: Dockerfile
-    container_name: orders_api
+    container_name: ordersapi
     ports:
-      - 8081:8080
+      - 8081:8081
     env_file:
       - ./envs/orders.env
     depends_on:
-      - orders_db
+      orders_db:
+        condition: service_healthy
+    networks:
+      - app-network
 
 volumes:
+  keycloak_data: {}
   orders_db_data: {}
+
+networks:
+  app-network:

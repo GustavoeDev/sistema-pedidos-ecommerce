@@ -8,3 +8,12 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/gustavoedev
+
+server:
+  port: 8081
