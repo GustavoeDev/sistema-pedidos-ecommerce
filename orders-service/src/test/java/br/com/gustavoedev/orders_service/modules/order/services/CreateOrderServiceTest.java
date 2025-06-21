@@ -2,6 +2,7 @@ package br.com.gustavoedev.orders_service.modules.order.services;
 
 import br.com.gustavoedev.orders_service.modules.order.OrderRepository;
 import br.com.gustavoedev.orders_service.modules.order.dto.OrderCreateDTO;
+import br.com.gustavoedev.orders_service.modules.order.dto.OrderEventDTO;
 import br.com.gustavoedev.orders_service.modules.order.dto.OrderItemDTO;
 import br.com.gustavoedev.orders_service.modules.order.entities.OrderEntity;
 import org.junit.jupiter.api.DisplayName;
@@ -10,8 +11,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -19,7 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class CreateOrderServiceTest {
@@ -29,6 +33,9 @@ public class CreateOrderServiceTest {
 
     @Mock
     private OrderRepository orderRepository;
+
+    @Mock
+    private RabbitTemplate rabbitTemplate;
 
     @Test
     @DisplayName("Create order")
@@ -83,5 +90,31 @@ public class CreateOrderServiceTest {
 
         assertThat(result.getTotalValue()).isEqualByComparingTo("25");
         assertThat(result.getItems()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Test total value and RabbitMQ send")
+    public void test_total_value_calculation_and_rabbitmq_send() {
+        var clientId = UUID.randomUUID();
+        var item1 = new OrderItemDTO(UUID.randomUUID(), 2, new BigDecimal("10")); // 20
+        var item2 = new OrderItemDTO(UUID.randomUUID(), 1, new BigDecimal("5"));  // 5
+        var items = List.of(item1, item2);
+
+        var orderEntityDTO = OrderCreateDTO.builder().items(items).build();
+
+        when(orderRepository.save(any(OrderEntity.class)))
+                .thenAnswer(invocation -> {
+                    OrderEntity saved = invocation.getArgument(0);
+                    saved.setId(UUID.randomUUID());
+                    return saved;
+                });
+
+        var result = orderService.execute(orderEntityDTO, clientId.toString());
+
+        assertThat(result.getTotalValue()).isEqualByComparingTo("25");
+        assertThat(result.getItems()).hasSize(2);
+
+        verify(rabbitTemplate, times(1))
+                .convertAndSend(eq("orders.order-created"), eq(""), any(OrderEventDTO.class));
     }
 }
