@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: Order Processings Service
+  datasource:
+    url: jdbc:postgresql://processings_db:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: ${RABBITMQ_DEFAULT_USER}
+    password: ${RABBITMQ_DEFAULT_PASS}
+    listener:
+      simple:
+        concurrency: 10
+        max-concurrency: 20
+
+        prefetch: 5
+
+        default-requeue-rejected: 'false'
+        retry:
+          enabled: 'true'
+          max-attempts: '3'
+          initial-interval: 1s
+          multiplier: '2'
+          max-interval: 5s
+
+server:
+  port: 8082
