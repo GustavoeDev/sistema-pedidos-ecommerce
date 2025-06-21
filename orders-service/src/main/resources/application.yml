@@ -15,5 +15,12 @@ spring:
         jwt:
           issuer-uri: http://keycloak:8080/realms/gustavoedev
 
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: ${RABBITMQ_DEFAULT_USER}
+    password: ${RABBITMQ_DEFAULT_PASS}
+
+
 server:
   port: 8081
