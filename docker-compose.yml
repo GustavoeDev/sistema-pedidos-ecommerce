@@ -31,10 +31,31 @@ services:
     depends_on:
       keycloak:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
       ordersapi:
         condition: service_started
     networks:
       - app-network
+
+  rabbitmq:
+    image: rabbitmq:3.7.8-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+    env_file:
+      - ./envs/rabbitmq.env
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq/
+      - ./enabled_plugins:/etc/rabbitmq/enabled_plugins
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   orders_db:
     container_name: orders_db
@@ -65,12 +86,50 @@ services:
     depends_on:
       orders_db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - app-network
+
+  processingsapi:
+    build:
+      context: ./order-processings-service
+      dockerfile: Dockerfile
+    container_name: processingsapi
+    ports:
+      - 8082:8082
+    env_file:
+      - ./envs/processings.env
+    depends_on:
+      processings_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  processings_db:
+    container_name: processings_db
+    image: postgres
+    ports:
+      - 5433:5432
+    env_file:
+      - ./envs/processings.env
+    volumes:
+      - processings_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   keycloak_data: {}
   orders_db_data: {}
+  processings_db_data: {}
+  rabbitmq_data: {}
 
 networks:
   app-network:
