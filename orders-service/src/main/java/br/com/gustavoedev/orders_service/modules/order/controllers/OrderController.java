@@ -26,7 +26,7 @@ public class OrderController {
         try {
             String clientId = jwt.getSubject();
             var result = orderService.execute(orderCreateDTO, clientId);
-            return ResponseEntity.status(201).body(result);
+            return ResponseEntity.accepted().body(result);
         } catch (Exception ex) {
             ex.printStackTrace();
             return ResponseEntity.badRequest().body(ex.getMessage());
